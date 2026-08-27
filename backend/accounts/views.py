@@ -1,6 +1,6 @@
 from rest_framework import generics, permissions
 
-from .serializers import RegisterSerializer, UserSerializer
+from .serializers import RegisterSerializer, UserSerializer, LogoutSerializer
 
 
 
@@ -13,3 +13,16 @@ class MeView(generics.RetrieveAPIView):
 
     def get_object(self):
         return self.request.user
+
+class LogoutView(generics.GenericAPIView):
+    serializer_class = LogoutSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        return Response(
+            {"detail": "Successfully logged out."}
+        )
