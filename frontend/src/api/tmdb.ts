@@ -1,6 +1,6 @@
 const TMDB_BASE_URL = "https://api.themoviedb.org/3";
 
-const TMDB_ACCESS_TOKEN = process.env.EXPO_PUBLIC_TMDB_ACCESS_TOKEN;
+const TMDB_ACCESS_TOKEN = process.env.EXPO_PUBLIC_TMDB_API_KEY;
 
 const headers = {
   Authorization: `Bearer ${TMDB_ACCESS_TOKEN}`,
