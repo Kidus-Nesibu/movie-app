@@ -1,3 +1,4 @@
+import { getAccessToken, saveTokens } from "../auth/tokenStorage"; 
 const BACKEND_BASE_URL = "http://172.16.157.25:8000/api";
 
 export async function backendRequest(
@@ -24,11 +25,32 @@ export async function backendRequest(
 }
 
 export async function loginUser(username: string, password: string) {
-  return backendRequest("/auth/login/", {
-    method: "POST",
-    body: JSON.stringify({
-      username,
-      password,
-    }),
-  });
+
+	const data = await backendRequest("/auth/login/", {
+		method: "POST",
+		body: JSON.stringify({
+			username,
+			password,
+		}), 
+	});
+
+	await saveTokens(data.access, data.refresh);
+
+	return data;
 }
+
+export async function getCurrentUser() {
+	const accessToken = await getAccessToken();
+
+	if (!accessToken) {
+		throw new Error("No access token found");
+	}
+
+	return backendRequest("/auth/me/", {
+		method: "GET",
+		headers: {
+			Authorization: `Bearer ${accessToken}`,
+		},
+	});
+}
+
