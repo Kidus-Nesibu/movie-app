@@ -5,26 +5,29 @@ import { getPopularMovies } from "./src/api/tmdb";
 import MovieFeed from "./src/components/MovieFeed";
 import type { Movie } from "./src/types/movie";
 
+import { loginUser } from "./src/api/backend";
+
 export default function App() {
   const [movies, setMovies] = useState<Movie[]>([]);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    async function loadMovies() {
-      try {
-        const data = await getPopularMovies();
+  async function loadMovies() {
+    try {
+      const data = await getPopularMovies();
 
-        console.log("INITIAL MOVIES:", data.results.length);
+      console.log("INITIAL MOVIES:", data.results.length);
 
-        setMovies(data.results);
-      } catch (error) {
-        console.error("MOVIE API ERROR:", error);
-      }
+      setMovies(data.results);
+    } catch (error) {
+      console.error("MOVIE API ERROR:", error);
     }
 
-    loadMovies();
-  }, []);
+  }
+
+  loadMovies();
+}, []);
 
   async function loadMoreMovies() {
     if (loading) return;
@@ -40,6 +43,7 @@ export default function App() {
       console.log("MOVIES RECEIVED:", data.results.length);
 
       setMovies((currentMovies) => [...currentMovies, ...data.results]);
+
 
       setPage(nextPage);
     } catch (error) {
