@@ -1,17 +1,73 @@
-import { getAccessToken, saveTokens } from "../auth/tokenStorage"; 
+import {
+  getAccessToken,
+  getRefreshToken,
+  saveTokens,
+  clearTokens,
+} from "../auth/tokenStorage";
+
 const BACKEND_BASE_URL = "http://172.16.157.25:8000/api";
 
 export async function backendRequest(
   endpoint: string,
   options: RequestInit = {}
 ) {
-  const response = await fetch(`${BACKEND_BASE_URL}${endpoint}`, {
+  let accessToken = await getAccessToken();
+
+  let response = await fetch(`${BACKEND_BASE_URL}${endpoint}`, {
     ...options,
     headers: {
       "Content-Type": "application/json",
       ...options.headers,
+      ...(accessToken
+        ? { Authorization: `Bearer ${accessToken}` }
+        : {}),
     },
   });
+
+  if (response.status === 401 && accessToken) {
+    const refreshToken = await getRefreshToken();
+
+    if (!refreshToken) {
+      await clearTokens();
+      throw new Error("Session expired");
+    }
+
+    const refreshResponse = await fetch(
+      `${BACKEND_BASE_URL}/auth/refresh/`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          refresh: refreshToken,
+        }),
+      }
+    );
+
+    if (!refreshResponse.ok) {
+      await clearTokens();
+      throw new Error("Session expired");
+    }
+
+    const refreshData = await refreshResponse.json();
+
+    await saveTokens(
+      refreshData.access,
+      refreshToken
+    );
+
+    accessToken = refreshData.access;
+
+    response = await fetch(`${BACKEND_BASE_URL}${endpoint}`, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        ...options.headers,
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+  }
 
   const data = await response.json();
 
@@ -24,33 +80,43 @@ export async function backendRequest(
   return data;
 }
 
-export async function loginUser(username: string, password: string) {
+export async function loginUser(
+  username: string,
+  password: string
+) {
+  const data = await backendRequest("/auth/login/", {
+    method: "POST",
+    body: JSON.stringify({
+      username,
+      password,
+    }),
+  });
 
-	const data = await backendRequest("/auth/login/", {
-		method: "POST",
-		body: JSON.stringify({
-			username,
-			password,
-		}), 
-	});
+  await saveTokens(
+    data.access,
+    data.refresh
+  );
 
-	await saveTokens(data.access, data.refresh);
+  return data;
+}
 
-	return data;
+export async function registerUser(
+  username: string,
+  email: string,
+  password: string
+) {
+  return backendRequest("/auth/register/", {
+    method: "POST",
+    body: JSON.stringify({
+      username,
+      email,
+      password,
+    }),
+  });
 }
 
 export async function getCurrentUser() {
-	const accessToken = await getAccessToken();
-
-	if (!accessToken) {
-		throw new Error("No access token found");
-	}
-
-	return backendRequest("/auth/me/", {
-		method: "GET",
-		headers: {
-			Authorization: `Bearer ${accessToken}`,
-		},
-	});
+  return backendRequest("/auth/me/", {
+    method: "GET",
+  });
 }
-
